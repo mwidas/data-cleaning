@@ -151,7 +151,9 @@ snowsurvey_fixed |>
 Let's check for negative values:
 
 ```{r}
-
+# there are no negative values
+snowsurvey_fixed |> 
+  filter(Snow_cover < 0)
 ```
 
 No negative value detected ✅
@@ -172,7 +174,9 @@ write_csv(snowsurvey_fixed, file.path(datadir_processed, "snow_cover.csv"))
 Import the species csv files with the bird species information:
 
 ```{r}
+species_csv <- read_csv(file.path(datadir_raw, species_file))
 
+glimpse(species_csv)
 ```
 
 This data set is stored in a wide format where each specie has its own column. This means that every time we discover a new species we will have to add a column. In addition, a bunch of `0` are stored in this table but do not really provide any information. According to the metadata:
