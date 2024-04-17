@@ -1,0 +1,217 @@
+---
+title: "Data Cleaning"
+author: "Melissa Widas"
+format: html
+---
+
+## Data Cleaning Assignment
+
+```{r, message=FALSE, warning=FALSE}
+# Libraries
+library(tidyverse)
+
+# file names
+datadir_raw <- "data/raw/"
+
+datadir_processed <- "data/processed/"
+
+species_file <- "ASDN_Daily_species.csv"
+
+snowsurvey_file <- "ASDN_Snow_survey.csv"
+```
+
+### Data Exploration
+
+Import the snow survey data with the snow cover column pre-cleaned from lecture. 
+```{r}
+# import snow_cover data
+snow_cover <- read_csv(file.path(datadir_processed, "snow_cover.csv"))
+
+# see the format for all of the columns
+# we see that water, land, and total covers do not appear to be in the correct format
+glimpse(snow_cover)
+
+```
+
+Let's start with the `Water_cover` column. The goal is to clean the `Water_cover` column to transform it into the correct data type and respect expectations for a percentage
+
+```{r}
+# what values are not numeric:  -, ., n/a, unk
+snow_cover |> 
+  count(Water_cover) |> 
+  filter(is.na(as.numeric(Water_cover)))
+
+# making assumptions that: "-, ., n/a, unk" are all probably abbreviations or other ways of indicating for NA's
+
+# for all values listed above assign them to NA
+watercover_fixed <- snow_cover |> 
+  mutate(Water_cover = ifelse(Water_cover %in% c(".", "-", "n/a", "unk"), NA, Water_cover))
+
+# check Water_cover to ensure that all values are now NA
+watercover_fixed |> 
+  count(Water_cover) |> 
+  filter(is.na(as.numeric(Water_cover)))
+
+# change data type from character to numeric since we are working with percentages
+watercover_fixed <- watercover_fixed |> 
+  mutate(Water_cover = as.numeric(Water_cover))
+
+# check for values above 100%
+watercover_fixed |> 
+  filter(Water_cover > 100)
+```
+
+There is 1 value above 100 at 353, the other values are also off with a high negative number for `Land_cover` and therefore we will assign this value to `NA` as percentages should not be above 100% so we are assuming an error.
+
+```{r}
+# assign value above 100 to NA
+watercover_fixed <- watercover_fixed |> 
+  mutate(Water_cover = ifelse(Water_cover > 100, NA, Water_cover))
+
+# check to ensure that mutate was successful, yes
+watercover_fixed |> 
+  filter(Water_cover > 100)
+
+# check for negative values: there are no negative values
+watercover_fixed |> 
+  filter(Water_cover < 0)
+
+# export this data set so a new data set contains the cleaned snow_cover and water_cover columns
+write_csv(watercover_fixed, file.path(datadir_processed, "snow_water_cover.csv"))
+```
+
+Next, let's work on the `Land_cover` column. The goal is to clean the `Land_cover` column to transform it into the correct data type and respect expectations for a percentage
+
+```{r}
+# import snow_water_cover data
+snow_water_cover <- read_csv(file.path(datadir_processed, "snow_water_cover.csv"))
+
+# what values are not numeric:  -, ., n/a, unk
+snow_water_cover |> 
+  count(Land_cover) |> 
+  filter(is.na(as.numeric(Land_cover)))
+
+# making assumptions that: "-, ., n/a, unk" are all probably abbreviations or other ways of indicating for NA's
+
+# for all values listed above assign them to NA
+land_cover_fixed <- snow_water_cover |> 
+  mutate(Land_cover = ifelse(Land_cover %in% c(".", "-", "n/a", "unk"), NA, Land_cover))
+
+# change data type from character to numeric since we are working with percentages
+land_cover_fixed <- land_cover_fixed |> 
+  mutate(Land_cover = as.numeric(Land_cover))
+
+# check for values above 100%: there are none
+land_cover_fixed |> 
+  filter(Land_cover > 100)
+
+# check for values below 0%, there are 2
+land_cover_fixed |> 
+  filter(Land_cover < 0)
+```
+
+There are 2 values below 0, 1 at -100, and 1 at -298. I am assuming that both of these values are errors as you cannot have a negative percentage. The first one appears to be a mistake on the data entry so I am going to assume that the value was meant to be +100% and therefore edit and keep the row. The second value appears be more of a full mistake so I am going to remove the row as it is impossible to know what the data was supposed to be. 
+
+```{r}
+
+# change the -100 value to +100
+land_cover_fixed <-land_cover_fixed |> 
+  mutate(Land_cover = ifelse(Land_cover == -100, 100, Land_cover))
+
+# assign NA's to the snow, water, land, and total cover for the row that was recorded with a land_cover of -298 
+land_cover_fixed <- land_cover_fixed %>%
+  mutate(Snow_cover = ifelse(Land_cover < 0, NA, Snow_cover),
+         Water_cover = ifelse(Land_cover < 0, NA, Water_cover),
+         Land_cover = ifelse(Land_cover < 0, NA, Land_cover),
+         Total_cover = ifelse(Land_cover < 0, NA, Total_cover))
+
+# check to ensure the mutate was successful and removed the row of -298; yes
+land_cover_fixed |> 
+  filter(Land_cover < 0)
+
+# this data set contains the cleaned snow_cover, water_cover, and land_cover columns
+write_csv(land_cover_fixed, file.path(datadir_processed, "snow_water_land_cover.csv"))
+```
+
+Next, let's work on the `Total_cover` column. The goal is to clean the `Total_cover` column to transform it into the correct data type and respect expectations that this column should always be equal to 100. 
+
+```{r}
+# import snow_water_land_cover data
+snow_water_land_cover <- read_csv(file.path(datadir_processed, "snow_water_land_cover.csv"))
+
+# what values are not numeric: there are no values that are not NA's 
+snow_water_land_cover |> 
+  count(Total_cover) |> 
+  filter(is.na(as.numeric(Total_cover)))
+
+# data type is already numeric so we are good to begin checking
+total_cover_fixed <- snow_water_land_cover |> 
+  glimpse()
+
+# check for values above 100%: there are 22 rows that are greater than 100%
+total_cover_fixed |> 
+  filter(Total_cover > 100)
+
+# check for values less than 0%: there are none
+total_cover_fixed |> 
+  filter(Total_cover < 0)
+
+# check for values that do not equal 100%: there are 4648 rows that do not = 100
+total_cover_fixed |> 
+  filter(Total_cover != 100)
+```
+
+There are 4,648 observations that do not have a `Total_cover` that is 100% and therefore have some error in data entry. By further examining the data there does appear to be instances where the calculations of the columns were simply incorrect. Therefore, our first step will be to recalculate the `Total_cover` based on the entries in the `Snow_cover`, `Water_cover`, and `Land_cover` columns in order to fix these mistakes.
+
+```{r}
+# recalculate total_cover column, to return 100 if snow_water+land = 100, and NA if it does not
+total_fixed <- total_cover_fixed |> 
+  mutate(Total_cover = ifelse((Snow_cover + Water_cover + Land_cover) == 100, 100, NA))
+```
+
+This returns that there is 5435 values where `Total_cover` does not equal 100. When examining the data that results from this I noticed that not all of the columns were adding correctly, i.e. if there was an `NA` value within the 3 columns being added it was returning `NA` instead of the calculated value. Therefore, we need to fix this.
+
+```{r}
+# calculate the sum of the 3 rows and allow for NA's to not cancel out the calculation 
+rowsum <- mutate(total_fixed, "total_cover" = rowSums((total_fixed[,6:8]), na.rm = TRUE))
+
+# change values from 0 back to NA's
+rowsum_na <-rowsum |> 
+  mutate(total_cover = ifelse(total_cover == 100, 100, NA))
+
+# check to see if the calculation changes the number of NA; 5412 is the new NA's
+rowsum_na |> 
+  count(total_cover) |> 
+  filter(is.na(as.numeric(total_cover)))
+
+total_fixed_final <- rowsum_na |> 
+  select(-Total_cover) |> 
+  relocate(total_cover, .after = Land_cover) |> 
+  rename("Total_cover" = "total_cover")
+
+# check for values that do not equal 100%: there are 5412 rows that do not = 100
+total_fixed_final |> 
+  count(Total_cover) |> 
+  filter(is.na(as.numeric(Total_cover)))
+```
+
+After re-calculating the `Snow_cover + Water_cover + Land_cover` columns we now have 5412 rows whose percentages do not add up to 100. Since these rows indicate that the columns had to have been entered incorrectly at some point.
+
+After examining this data I noticed that there are an abundance of rows that do not have any data recorded and notably have `N/A` or `.` in the observer column. I am going to remove these rows as they do not contain pertinent information.
+
+```{r}
+# remove rows that do not have recorded observers and that do not have total_cover values
+total_observer <- total_fixed_final |> 
+  mutate("Observer_not_present" = Observer %in% c(".", "N/A")) |> 
+  filter(Observer_not_present == FALSE)
+```
+
+The data is now ready to be exported.
+
+```{r}
+# this data set contains cleaned snow_cover, water_cover, land_cover, and total_cover columns
+write_csv(total_observer, file.path(datadir_processed, "all_cover_fixed_Widas.csv"))
+```
+
+
+
