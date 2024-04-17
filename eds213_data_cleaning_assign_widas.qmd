@@ -6,6 +6,8 @@ format: html
 
 ## Data Cleaning Assignment
 
+Github Repo Link: <https://github.com/mwidas/data-cleaning>
+
 ```{r, message=FALSE, warning=FALSE}
 # Libraries
 library(tidyverse)
@@ -22,7 +24,8 @@ snowsurvey_file <- "ASDN_Snow_survey.csv"
 
 ### Data Exploration
 
-Import the snow survey data with the snow cover column pre-cleaned from lecture. 
+Import the snow survey data with the snow cover column pre-cleaned from lecture.
+
 ```{r}
 # import snow_cover data
 snow_cover <- read_csv(file.path(datadir_processed, "snow_cover.csv"))
@@ -110,7 +113,7 @@ land_cover_fixed |>
   filter(Land_cover < 0)
 ```
 
-There are 2 values below 0, 1 at -100, and 1 at -298. I am assuming that both of these values are errors as you cannot have a negative percentage. The first one appears to be a mistake on the data entry so I am going to assume that the value was meant to be +100% and therefore edit and keep the row. The second value appears be more of a full mistake so I am going to remove the row as it is impossible to know what the data was supposed to be. 
+There are 2 values below 0, 1 at -100, and 1 at -298. I am assuming that both of these values are errors as you cannot have a negative percentage. The first one appears to be a mistake on the data entry so I am going to assume that the value was meant to be +100% and therefore edit and keep the row. The second value appears be more of a full mistake so I am going to remove the row as it is impossible to know what the data was supposed to be.
 
 ```{r}
 
@@ -133,7 +136,7 @@ land_cover_fixed |>
 write_csv(land_cover_fixed, file.path(datadir_processed, "snow_water_land_cover.csv"))
 ```
 
-Next, let's work on the `Total_cover` column. The goal is to clean the `Total_cover` column to transform it into the correct data type and respect expectations that this column should always be equal to 100. 
+Next, let's work on the `Total_cover` column. The goal is to clean the `Total_cover` column to transform it into the correct data type and respect expectations that this column should always be equal to 100.
 
 ```{r}
 # import snow_water_land_cover data
@@ -212,6 +215,3 @@ The data is now ready to be exported.
 # this data set contains cleaned snow_cover, water_cover, land_cover, and total_cover columns
 write_csv(total_observer, file.path(datadir_processed, "all_cover_fixed_Widas.csv"))
 ```
-
-
-
